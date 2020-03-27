@@ -1,21 +1,34 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:gis_jatinangor/src/common/errors.dart';
-import 'package:gis_jatinangor/src/style/map_utils.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong/latlong.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:flutter/material.dart';
+import 'package:map_controller/map_controller.dart';
 
 
 
 
 class MapsBloc {
   BehaviorSubject<Position> _position$;
-  BehaviorSubject<Position> get getPosition => _position$;
+  BehaviorSubject<Position> get getPosition => _position$.stream;
 
   StreamSubscription<Position> _positionStream;
+
+  MapController _mapController;
+  StatefulMapController _statefulMapController;
+  StreamSubscription<StatefulMapControllerStateChange> _sub;
+
+  MapController get getMapController => _mapController; 
+  StatefulMapController get getStatefulMapController => _statefulMapController;
+  
+
+
+  
+  
   //BehaviorSubject<MedicineType> _selectedMedicineType$;
   //BehaviorSubject<MedicineType> get selectedMedicineType =>
   //    _selectedMedicineType$.stream;
@@ -35,41 +48,32 @@ class MapsBloc {
   static const double CAMERA_ZOOM = 13;
   static const double CAMERA_TILT = 0;
   static const double CAMERA_BEARING = 30;
-  static const LatLng SOURCE_LOCATION = LatLng(42.7477863, -71.1699932);
-  static const LatLng DEST_LOCATION = LatLng(42.6871386, -71.2143403);
 
-  Completer<GoogleMapController> _controller;
     // this set will hold my markers
     Set<Marker> _markers;
     // this will hold the generated polylines
     Set<Polyline> _polylines;
     // this will hold each polyline coordinate as Lat and Lng pairs
-    List<LatLng> polylineCoordinates;
-    // this is the key object - the PolylinePoints
-    // which generates every polyline between start and finish
 
     Set<Polygon> _polygones;
 
-    List<LatLng> polygonCoordinates;
 
     PolylinePoints polylinePoints;
     String googleAPIKey;
     // for my custom icons
-    BitmapDescriptor sourceIcon;
-    BitmapDescriptor destinationIcon;
 
 
   MapsBloc() {
 
-    _position$ = BehaviorSubject<Position>.seeded(null);
-    _controller = Completer();
+    _position$ = BehaviorSubject<Position>.seeded(Position(latitude: 0,longitude: 0));
     _markers = {};
     _polylines = {};
-    polylineCoordinates = [];
     _polygones = {};
-    polygonCoordinates = [];
     polylinePoints = PolylinePoints();
     googleAPIKey = "AIzaSyDtecH6UKFgDTnTICjSTw_nBzI5nsmt8oE";
+
+    _mapController = MapController();
+    _statefulMapController = StatefulMapController(mapController: _mapController);
     
     //_selectedMedicineType$ =
     //    BehaviorSubject<MedicineType>.seeded(MedicineType.None);
@@ -77,19 +81,25 @@ class MapsBloc {
     //_selectedTimeOfDay$ = BehaviorSubject<String>.seeded("None");
     //_selectedInterval$ = BehaviorSubject<int>.seeded(0);
     //_errorState$ = BehaviorSubject<EntryError>();
-    setSourceAndDestinationIcons();
+    _statefulMapController.onReady.then((_) => print("The map controller is ready"));
+    _sub = _statefulMapController.changeFeed.listen((onData) {
+     print(onData);
+    });
+    //_sub = _statefulMapController.changeFeed.listen((change) => setState(() {}));
+    startListenToGetPosition();
   }
 
   void dispose() {
     _position$.close();
     stopListenToGetPosition();
+    _sub.cancel();
     //_selectedMedicineType$.close();
     // _checkedDays$.close();
     //_selectedTimeOfDay$.close();
     //_selectedInterval$.close();
   }
 
-  Future<void> listenToGetPosition() async {
+  Future<void> startListenToGetPosition() async {
     Position position = await Geolocator().getLastKnownPosition(desiredAccuracy: LocationAccuracy.high);
     _position$.add(position);
     var geolocator = Geolocator();
@@ -98,71 +108,46 @@ class MapsBloc {
     _positionStream = geolocator.getPositionStream(locationOptions).listen(
         (Position position) {
           _position$.add(position);
+          _statefulMapController.addMarker(marker: deviceLocation(position),name: "deviceLocation");
             print(position == null ? 'Unknown' : position.latitude.toString() + ', ' + position.longitude.toString());
         });
     
+  }
+
+  Marker deviceLocation(Position position) {
+    return Marker(
+      point: LatLng(position.latitude, position.longitude),
+      height: 10,
+      width: 10,
+      builder: (ctx) => Container(
+                        child: Icon(
+                          Icons.brightness_1,
+                          color: Colors.blue,
+                        ),
+                      )
+    );
   }
 
   stopListenToGetPosition() {
     _positionStream.cancel();
   }
 
-
-
-
-  void setSourceAndDestinationIcons() async {
-      sourceIcon = await BitmapDescriptor.fromAssetImage(
-          ImageConfiguration(devicePixelRatio: 2.5), 'assets/icon/ic_driving_pin.png');
-      destinationIcon = await BitmapDescriptor.fromAssetImage(
-          ImageConfiguration(devicePixelRatio: 2.5),
-          'assets/icon/ic_finish_marker.png');
+  void zoomOut() {
+    _statefulMapController.zoomOut();
   }
 
-  setPolylines() async {
-
-        List<PointLatLng> result = await polylinePoints?.getRouteBetweenCoordinates(
-            googleAPIKey,
-            SOURCE_LOCATION.latitude,
-            SOURCE_LOCATION.longitude,
-            DEST_LOCATION.latitude,
-            DEST_LOCATION.longitude);
-        if (result.isNotEmpty) {
-          // loop through all PointLatLng points and convert them
-          // to a list of LatLng, required by the Polyline
-          result.forEach((PointLatLng point) {
-            polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-            polygonCoordinates.add(LatLng(point.latitude, point.longitude));
-          });
-        }
-
-        // create a Polyline instance
-          // with an id, an RGB color and the list of LatLng pairs
-          Polyline polyline = Polyline(
-              polylineId: PolylineId("poly"),
-              color: Color.fromARGB(255, 40, 122, 198),
-              points: polylineCoordinates);
-
-          // add the constructed polyline as a set of points
-          // to the polyline set, which will eventually
-          // end up showing up on the map
-          _polylines.add(polyline);
-
-          Polygon polygon = Polygon(
-            polygonId: PolygonId("polygon1"),
-            fillColor: Color.fromARGB(255, 78, 19, 198),
-            strokeColor: Color.fromARGB(255, 40, 122, 198),
-            points: polygonCoordinates
-          );
-          _polygones.add(polygon);
-
+  void zoomIn() {
+    _statefulMapController.zoomIn();
   }
 
-  void onMapCreated(GoogleMapController controller) {
-      controller.setMapStyle(MapUtils.mapStyles);
-      _controller.complete(controller);
-      setMapPins();
-      setPolylines();
+  void centerOnLiveMarker() async {
+    print("hei");
+    Position pos =  await getPosition.last;
+    LatLng centerPosition = LatLng(30, 114);
+    _statefulMapController.centerOnPoint(centerPosition);
+    _mapController.move(centerPosition, 8);
   }
+
 
   void setMapPins() {
       
@@ -181,16 +166,6 @@ class MapsBloc {
   void updateTime(String time) {
     //_selectedTimeOfDay$.add(time);
   }
-
-  // void addtoDays(Day day) {
-  //   List<Day> _updatedDayList = _checkedDays$.value;
-  //   if (_updatedDayList.contains(day)) {
-  //     _updatedDayList.remove(day);
-  //   } else {
-  //     _updatedDayList.add(day);
-  //   }
-  //   _checkedDays$.add(_updatedDayList);
-  // }
 
   void updateSelectedMedicine() {
     //MedicineType _tempType = _selectedMedicineType$.value;

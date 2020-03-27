@@ -31,7 +31,7 @@ class _PemudaBismillahState extends State<PemudaBismillah> {
           primarySwatch: Colors.green,
           brightness: Brightness.light,
         ),
-        home: WMSLayerPage(),
+        home: MapsPage(),
         debugShowCheckedModeBanner: false,
       ),
     );

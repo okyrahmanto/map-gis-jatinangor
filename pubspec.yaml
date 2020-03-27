@@ -14,7 +14,7 @@ description: A new Flutter project.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.1.0 <3.0.0"
+  sdk: ">=2.2.2 <3.0.0"
 
 dependencies:
   flutter:
@@ -23,9 +23,10 @@ dependencies:
   google_maps_flutter: ^0.5.22+2
   flutter_polyline_points: ^0.1.0
   rxdart: ^0.23.1
-  provider: ^3.0.0+1
+  provider: ^4.0.4
   shared_preferences: 0.5.2
   flutter_local_notifications: 1.1.6
+  latlong: ^0.6.1
   flutter_map:
     git: 
       url: git://github.com/johnpryan/flutter_map.git
