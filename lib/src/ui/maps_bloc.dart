@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:gis_jatinangor/src/common/errors.dart';
+import 'package:gis_jatinangor/src/models/errors.dart';
 import 'package:gis_jatinangor/src/style/map_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rxdart/rxdart.dart';

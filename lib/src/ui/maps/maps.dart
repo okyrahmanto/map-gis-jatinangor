@@ -20,7 +20,7 @@ class _MapsPageState extends State<MapsPage> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      appBar: AppBar(title: Text('WMS Layer')),
+      appBar: AppBar(title: Text('GIS Jatinangor')),
       body: Padding(
         padding: EdgeInsets.all(0),
         child: Column(
@@ -109,18 +109,18 @@ Widget maps(_mapsBloc) {
               options: MapOptions(
                 center: LatLng(snapshot.data.latitude, snapshot.data.longitude),
                 zoom: 6.0,
-                onTap: (point) => print(point),
+                onTap: (point) => print('$snapshot.data.latitude' '$snapshot.data.longitude'),
                 onLongPress: (point) => print(point),
                 onPositionChanged: (position, hasGesture) => print("$position $hasGesture"),
               ),
               layers: [
-                //TileLayerOptions(
-                //  urlTemplate:
-                //      "http://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                //),
+                TileLayerOptions(
+                  urlTemplate:
+                      "http://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                ),
                 
               
-                TileLayerOptions(
+                /*TileLayerOptions(
                       wmsOptions: WMSTileLayerOptions(
                     baseUrl: 'http://maps.heigit.org/osm-wms/service?',
                     layers: ['europe_wms:hs_srtm_europa'],
@@ -129,7 +129,7 @@ Widget maps(_mapsBloc) {
                      // layers: ['sayang:sayang-utm05m'],
                     //format: 'image/png',
                     )
-                  ),
+                  ),*/
                   MarkerLayerOptions(markers: _mapsBloc.getStatefulMapController.markers),
               ],
             );

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:gis_jatinangor/src/common/errors.dart';
+import 'package:gis_jatinangor/src/models/errors.dart';
 import 'package:latlong/latlong.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:map_controller/map_controller.dart';
@@ -65,7 +65,7 @@ class MapsBloc {
 
   MapsBloc() {
 
-    _position$ = BehaviorSubject<Position>.seeded(Position(latitude: 0,longitude: 0));
+    _position$ = BehaviorSubject<Position>.seeded(null);
     _markers = {};
     _polylines = {};
     _polygones = {};
